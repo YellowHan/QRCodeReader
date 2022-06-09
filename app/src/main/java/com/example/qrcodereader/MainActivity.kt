@@ -4,10 +4,10 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Toast
-import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -25,25 +25,24 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
     private val PERMISSIONS_REQUEST_CODE = 1
     private val PERMISSIONS_REQUIRED = arrayOf(Manifest.permission.CAMERA)
-    private var isDetected = false // 1.
+    private var isDetected = false
 
-    override fun onResume() { // 2.
+    override fun onResume() {
         super.onResume()
         isDetected = false
     }
 
-    fun getImageAnalysis() : ImageAnalysis {
+    private fun getImageAnalysis() : ImageAnalysis {
 
         val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
         val imageAnalysis = ImageAnalysis.Builder().build()
 
-        // Analyzer를 설정한다.
         imageAnalysis.setAnalyzer(cameraExecutor, QRCodeAnalyzer(object : OnDetectListener {
             override fun onDetect(msg: String) {
-                if(!isDetected) { // 3.
-                    isDetected = true // 데이터가 감지되었으므로 true로 바꾸어준다.
+                if(!isDetected) {
+                    isDetected = true
 
-                    val intent = Intent(this@MainActivity, ResultActivity::class.java) // 4.
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(msg)) // 4.
                     intent.putExtra("msg", msg)
                     startActivity(intent)
                 }
@@ -68,7 +67,7 @@ class MainActivity : AppCompatActivity() {
        }
     }
 
-    fun hasPermissions(context: Context) = PERMISSIONS_REQUIRED.all {
+    private fun hasPermissions(context: Context) = PERMISSIONS_REQUIRED.all {
         ContextCompat.checkSelfPermission(context, it) ==
                 PackageManager.PERMISSION_GRANTED
     }
@@ -91,10 +90,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 미리보기와 이미지 분석을 시작한다.
-    fun startCamera() {
+    private fun startCamera() {
         cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        cameraProviderFuture.addListener(Runnable {
+        cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
             val preview = getPreview()
             val imageAnalysis = getImageAnalysis()
@@ -105,9 +103,9 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
-    fun getPreview() : Preview {
+    private fun getPreview() : Preview {
         val preview : Preview = Preview.Builder().build()
-        preview.setSurfaceProvider(binding.barcodePreview.getSurfaceProvider())
+        preview.setSurfaceProvider(binding.barcodePreview.surfaceProvider)
         return preview
     }
 }
